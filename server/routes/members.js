@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/requireAdmin');
 
 // 获取所有成员（支持搜索）
 router.get('/', async (req, res) => {
@@ -27,7 +28,7 @@ router.get('/', async (req, res) => {
 });
 
 // 创建新成员（需要权限）
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, requireAdmin, async (req, res) => {
   const { name, remark } = req.body;
   
   if (!name) {
@@ -52,7 +53,7 @@ router.post('/', requireAuth, async (req, res) => {
 });
 
 // 更新成员（需要权限）
-router.put('/:id', requireAuth, async (req, res) => {
+router.put('/:id', requireAuth, requireAdmin, async (req, res) => {
   const { name, remark } = req.body;
   
   if (!name || !name.trim()) {
@@ -83,7 +84,7 @@ router.put('/:id', requireAuth, async (req, res) => {
 });
 
 // 删除成员（需要权限）
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
     await db.runAsync('DELETE FROM members WHERE id = ?', [req.params.id]);
     res.json({ message: '成员已删除' });
@@ -93,7 +94,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
 });
 
 // JSON 批量导入成员（需要权限）
-router.post('/import-json', requireAuth, async (req, res) => {
+router.post('/import-json', requireAuth, requireAdmin, async (req, res) => {
   const { members } = req.body;
   
   if (!Array.isArray(members)) {

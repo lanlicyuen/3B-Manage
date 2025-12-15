@@ -3,11 +3,12 @@
     <header>
       <h1>事件详情</h1>
       <div class="header-actions">
-        <button v-if="!editing" @click="startEdit" class="edit-btn">编辑</button>
+        <!-- 管理员功能按钮（需要权限） -->
+        <button v-if="!editing && isAdmin" @click="startEdit" class="edit-btn">编辑</button>
         <button v-if="editing" @click="saveEdit" class="save-btn">保存</button>
         <button v-if="editing" @click="cancelEdit" class="cancel-btn">取消</button>
-        <button v-if="!editing" @click="exportTxt" class="export-btn">导出TXT</button>
-        <button v-if="!editing" @click="deleteEvent" class="delete-btn">删除</button>
+        <button v-if="!editing && isAdmin" @click="exportTxt" class="export-btn">导出TXT</button>
+        <button v-if="!editing && isAdmin" @click="deleteEvent" class="delete-btn">删除</button>
         <button @click="$router.push('/')">返回</button>
       </div>
     </header>
@@ -147,6 +148,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import draggable from 'vuedraggable';
 import { api } from '../api';
+import { isAdmin as checkAdmin, requireAuth } from '../utils/auth';
 
 const route = useRoute();
 const router = useRouter();
@@ -158,6 +160,7 @@ const editing = ref(false);
 const memberSearch = ref('');
 const members = ref([]);
 const selectedMemberIds = ref([]);
+const isAdmin = ref(false);
 
 const editData = ref({
   date: '',
@@ -268,8 +271,12 @@ const txtPreview = computed(() => {
   return text;
 });
 
-// 开始编辑
-const startEdit = async () => {
+// 开始编辑（需要权限保护）
+const startEdit = requireAuth(async () => {
+  if (!checkAdmin()) {
+    return; // requireAuth 已处理提示
+  }
+  
   await loadMembers();
   
   editData.value = {
@@ -283,7 +290,7 @@ const startEdit = async () => {
   selectedMemberIds.value = event.value.members.map(m => m.id);
   
   editing.value = true;
-};
+});
 
 // 保存编辑
 const saveEdit = async () => {
@@ -324,18 +331,26 @@ const cancelEdit = () => {
   selectedMemberIds.value = [];
 };
 
-// 导出 TXT
-const exportTxt = async () => {
+// 导出 TXT（需要权限保护）
+const exportTxt = requireAuth(async () => {
+  if (!checkAdmin()) {
+    return;
+  }
+  
   try {
     await api.exportEventTxt(route.params.id);
   } catch (error) {
     console.error('导出失败:', error);
     alert(`导出失败: ${error.message}`);
   }
-};
+});
 
 // 删除事件
-const deleteEvent = async () => {
+const deleteEvent = requireAuth(async () => {
+  if (!checkAdmin()) {
+    return;
+  }
+  
   if (!confirm('确定要删除此事件吗？此操作不可恢复！')) {
     return;
   }
@@ -346,11 +361,12 @@ const deleteEvent = async () => {
     router.push('/');
   } catch (error) {
     console.error('删除失败:', error);
-    alert('删除失败');
+    alert('删除失败：' + error.message);
   }
-};
+});
 
 onMounted(() => {
+  isAdmin.value = checkAdmin();
   loadEvent();
 });
 </script>

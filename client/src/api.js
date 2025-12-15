@@ -1,12 +1,25 @@
 const API_BASE = '/api';
 
-// 获取认证头
+// 获取管理员 Token（用于权限验证）
+function getAdminToken() {
+  return localStorage.getItem('adminToken');
+}
+
+// 获取认证头（包含管理员权限验证）
 function getAuthHeaders() {
   const token = localStorage.getItem('admin_token');
+  const adminToken = getAdminToken();
   const headers = { 'Content-Type': 'application/json' };
+  
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
+  
+  // 添加管理员权限 Token
+  if (adminToken) {
+    headers['X-Admin-Token'] = adminToken;
+  }
+  
   return headers;
 }
 

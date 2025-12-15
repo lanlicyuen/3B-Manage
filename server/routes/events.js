@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/requireAdmin');
 
 // 获取事件列表（支持搜索和日期过滤，返回事件及参与人数）
 router.get('/', async (req, res) => {
@@ -125,7 +126,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // 更新事件（需要权限）
-router.put('/:id', requireAuth, async (req, res) => {
+router.put('/:id', requireAuth, requireAdmin, async (req, res) => {
   const { date, title, task, remark, memberIds } = req.body;
   
   if (!date || !title) {
@@ -175,7 +176,7 @@ router.put('/:id', requireAuth, async (req, res) => {
 });
 
 // 创建新事件（需要权限）
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, requireAdmin, async (req, res) => {
   const { date, title, task, remark, memberIds } = req.body;
   
   if (!date || !title) {
@@ -218,7 +219,7 @@ router.post('/', requireAuth, async (req, res) => {
 });
 
 // 导出事件为 TXT（需要权限）
-router.post('/:id/export-txt', requireAuth, async (req, res) => {
+router.post('/:id/export-txt', requireAuth, requireAdmin, async (req, res) => {
   try {
     const event = await db.getAsync(
       'SELECT * FROM events WHERE id = ?',
@@ -260,7 +261,7 @@ router.post('/:id/export-txt', requireAuth, async (req, res) => {
 });
 
 // 删除事件（需要权限）
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
     await db.runAsync('DELETE FROM events WHERE id = ?', [req.params.id]);
     res.json({ message: '事件已删除' });

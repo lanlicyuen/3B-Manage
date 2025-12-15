@@ -1,23 +1,6 @@
 <template>
   <div class="matrix-view">
-    <header>
-      <h1>
-        <img src="/brand/logo.png" alt="Logo" class="logo" />
-        游戏成员管理系统
-      </h1>
-      <nav>
-        <template v-if="isLoggedIn">
-          <button @click="$router.push('/members')">👥 成员管理</button>
-          <button @click="$router.push('/events/create')">➕ 创建事件</button>
-          <button @click="$router.push('/events')">📅 查看事件</button>
-          <button @click="$router.push('/reports')">📈 报表导出</button>
-          <button @click="handleLogout" class="logout-btn">🚪 退出</button>
-        </template>
-        <template v-else>
-          <button @click="showLoginModal" class="login-btn">🔐 总督请进</button>
-        </template>
-      </nav>
-    </header>
+    <!-- Header 已移至 App.vue 顶部，此处删除重复 -->
 
     <LoginModal 
       v-if="loginModalVisible" 
@@ -94,6 +77,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '../api';
+import { isAdmin } from '../utils/auth';
 import MatrixCell from '../components/MatrixCell.vue';
 import LoginModal from '../components/LoginModal.vue';
 import InstallPWA from '../components/InstallPWA.vue';
@@ -233,10 +217,10 @@ const loadData = async () => {
 
 // 检查登录状态
 const checkLogin = () => {
-  isLoggedIn.value = !!localStorage.getItem('admin_token');
+  isLoggedIn.value = isAdmin();
 };
 
-// 显示登录弹窗
+// 显示登录弹窗（已移除，使用顶部 App.vue 统一登录入口）
 const showLoginModal = () => {
   loginModalVisible.value = true;
 };
@@ -247,7 +231,7 @@ const handleLoginSuccess = () => {
   loginModalVisible.value = false;
 };
 
-// 退出登录
+// 退出登录（已移除，使用顶部 App.vue 统一退出）
 const handleLogout = async () => {
   if (!confirm('确定要退出吗？')) return;
   
@@ -275,67 +259,7 @@ onMounted(() => {
   overflow-x: auto;
 }
 
-header {
-  margin-bottom: 20px;
-}
-
-h1 {
-  margin: 0 0 15px 0;
-  color: #333;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-h1 .logo {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  display: block;
-}
-
-@media (max-width: 768px) {
-  h1 .logo {
-    width: 32px;
-    height: 32px;
-  }
-}
-
-nav {
-  display: flex;
-  gap: 10px;
-}
-
-nav button {
-  padding: 10px 20px;
-  background-color: #1976d2;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-nav button:hover {
-  background-color: #1565c0;
-}
-
-.login-btn {
-  background-color: #ff9800 !important;
-  font-weight: bold;
-}
-
-.login-btn:hover {
-  background-color: #f57c00 !important;
-}
-
-.logout-btn {
-  background-color: #757575 !important;
-}
-
-.logout-btn:hover {
-  background-color: #616161 !important;
-}
+/* header, h1, nav 样式已移除（Header 已统一在 App.vue 中） */
 
 .date-range-selector {
   display: flex;

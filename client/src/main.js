@@ -1,9 +1,29 @@
 import { createApp } from 'vue';
 import router from './router';
 import App from './App.vue';
+import { isAdmin } from './utils/auth';
 
 const app = createApp(App);
 app.use(router);
+
+// 路由守卫：保护需要管理员权限的页面
+router.beforeEach((to, from, next) => {
+  // 需要管理员权限的路由
+  const adminRoutes = ['/members', '/events/new'];
+  
+  // 检查是否需要权限
+  const needsAdmin = adminRoutes.some(route => to.path.startsWith(route)) || 
+                     to.path.match(/^\/events\/\d+\/edit$/);
+  
+  if (needsAdmin && !isAdmin()) {
+    alert('需要管理员登录才能访问此页面');
+    next('/');
+    return;
+  }
+  
+  next();
+});
+
 app.mount('#app');
 
 // 注册 PWA Service Worker
