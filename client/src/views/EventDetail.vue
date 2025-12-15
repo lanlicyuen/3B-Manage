@@ -1,202 +1,278 @@
 <template>
   <div class="event-detail">
     <header>
-      <h1>📋 事件详情</h1>
+      <h1>事件详情</h1>
       <div class="header-actions">
-        <button v-if="!editing" @click="startEdit" class="edit-btn">✏️ 编辑</button>
-        <button v-if="editing" @click="saveEdit" class="save-btn">💾 保存</button>
-        <button v-if="editing" @click="cancelEdit" class="cancel-btn">❌ 取消</button>
-        <button v-if="!editing" @click="exportTxt" class="export-btn">📥 导出 TXT</button>
-        <button v-if="!editing" @click="deleteEvent" class="delete-btn">🗑️ 删除</button>
-        <button @click="$router.push('/')">← 返回</button>
+        <button v-if="!editing" @click="startEdit" class="edit-btn">编辑</button>
+        <button v-if="editing" @click="saveEdit" class="save-btn">保存</button>
+        <button v-if="editing" @click="cancelEdit" class="cancel-btn">取消</button>
+        <button v-if="!editing" @click="exportTxt" class="export-btn">导出TXT</button>
+        <button v-if="!editing" @click="deleteEvent" class="delete-btn">删除</button>
+        <button @click="$router.push('/')">返回</button>
       </div>
     </header>
 
-    <div class="loading" v-if="loading">加载中...</div>
-
+    <div v-if="loading" class="loading">加载中...</div>
+    <div v-else-if="error" class="error">{{ error }}</div>
     <div v-else-if="event" class="content">
       <!-- 编辑模式 -->
       <div v-if="editing" class="edit-card">
-        <h2>编辑事件</h2>
-        <form @submit.prevent="saveEdit">
-          <div class="form-group">
-            <label>日期 *</label>
-            <input type="date" v-model="editData.date" required>
-          </div>
-          <div class="form-group">
-            <label>标题 *</label>
-            <input v-model="editData.title" required>
-          </div>
-          <div class="form-group">
-            <label>任务</label>
-            <input v-model="editData.task">
-          </div>
-          <div class="form-group">
-            <label>备注</label>
-            <textarea v-model="editData.remark" rows="3"></textarea>
-          </div>
-        </form>
-        
+        <div class="form-group">
+          <label>标题</label>
+          <input v-model="editData.title" type="text" placeholder="输入事件标题" />
+        </div>
+
+        <div class="form-group">
+          <label>地点</label>
+          <input v-model="editData.location" type="text" placeholder="输入地点" />
+        </div>
+
+        <div class="form-group">
+          <label>时间</label>
+          <input v-model="editData.time" type="datetime-local" />
+        </div>
+
+        <div class="form-group">
+          <label>备注</label>
+          <textarea v-model="editData.notes" rows="3" placeholder="输入备注"></textarea>
+        </div>
+
         <h3>参与成员</h3>
         <div class="members-selector">
           <div class="search-box">
-            <input 
-              v-model="memberSearch" 
-              placeholder="🔍 搜索成员..."
-            >
+            <input
+              v-model="memberSearch"
+              type="text"
+              placeholder="搜索成员..."
+            />
           </div>
+
+          <!-- 已选成员 - 拖拽排序 -->
+          <div class="selected-members-section">
+            <div class="section-header">
+              <h4>已选成员（{{ selectedMemberIds.length }}人）</h4>
+              <div class="bulk-actions">
+                <button @click="selectAll" class="action-btn">全选</button>
+                <button @click="clearAll" class="action-btn">清空</button>
+              </div>
+            </div>
+            
+            <div v-if="selectedMemberIds.length === 0" class="empty-message">
+              请从下方选择成员
+            </div>
+            
+            <draggable
+              v-else
+              v-model="selectedMemberIds"
+              item-key="id"
+              class="selected-members-list"
+              :animation="200"
+              handle=".drag-handle"
+            >
+              <template #item="{element, index}">
+                <div class="selected-member-item">
+                  <span class="drag-handle">☰</span>
+                  <span class="member-order">{{ index + 1 }}.</span>
+                  <span class="member-name-text">{{ getMemberName(element) }}</span>
+                  <button @click="toggleMember(element)" class="remove-btn">×</button>
+                </div>
+              </template>
+            </draggable>
+          </div>
+
+          <!-- 可选成员列表 -->
           <div class="members-grid">
-            <label 
-              v-for="member in filteredMembers" 
-              :key="member.id" 
+            <label
+              v-for="member in filteredMembers"
+              :key="member.id"
               class="member-checkbox"
             >
-              <input 
-                type="checkbox" 
-                :value="member.id" 
-                v-model="editData.memberIds"
-              >
-              <span class="member-id">{{ String(member.id).padStart(3, '0') }}</span>
-              <span class="member-name">{{ member.name }}</span>
+              <input
+                type="checkbox"
+                :checked="selectedMemberIds.includes(member.id)"
+                @change="toggleMember(member.id)"
+              />
+              <span>{{ member.name }}</span>
             </label>
           </div>
         </div>
       </div>
-      
+
       <!-- 查看模式 -->
-      <div v-else class="info-card">
-        <h2>事件信息</h2>
-        <div class="info-grid">
-          <div class="info-item">
-            <span class="label">日期</span>
-            <span class="value">{{ event.date }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">标题</span>
-            <span class="value">{{ event.title }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">任务</span>
-            <span class="value">{{ event.task || '-' }}</span>
-          </div>
-          <div class="info-item full-width">
-            <span class="label">备注</span>
-            <span class="value">{{ event.remark || '-' }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="members-card">
-        <h2>参与成员 ({{ event.members.length }})</h2>
-        <div class="members-list">
-          <div v-for="member in event.members" :key="member.id" class="member-item">
-            <span class="member-id">{{ String(member.id).padStart(3, '0') }}</span>
-            <span class="member-name">{{ member.name }}</span>
-            <span v-if="member.note" class="member-note">{{ member.note }}</span>
+      <template v-else>
+        <div class="info-card">
+          <h2>基本信息</h2>
+          <div class="info-grid">
+            <div class="info-item full-width">
+              <span class="label">标题</span>
+              <span class="value">{{ event.title }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">地点</span>
+              <span class="value">{{ event.location || '未填写' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">时间</span>
+              <span class="value">{{ formatDateTime(event.time) }}</span>
+            </div>
+            <div class="info-item full-width">
+              <span class="label">备注</span>
+              <span class="value">{{ event.notes || '无' }}</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="preview-card">
-        <h2>TXT 导出预览</h2>
-        <pre class="txt-preview">{{ txtPreview }}</pre>
-      </div>
-    </div>
+        <div class="members-card">
+          <h2>参与成员 ({{ event.members.length }}人)</h2>
+          <div class="members-list">
+            <div v-for="(member, index) in event.members" :key="member.id" class="member-item">
+              <span class="member-order">{{ index + 1 }}.</span>
+              <span class="member-name">{{ member.name }}</span>
+              <span v-if="member.note" class="member-note">{{ member.note }}</span>
+            </div>
+          </div>
+        </div>
 
-    <div v-else class="error">
-      事件不存在或已被删除
+        <div class="preview-card">
+          <h2>导出预览</h2>
+          <div class="txt-preview">{{ txtPreview }}</div>
+        </div>
+      </template>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import { api } from '../api';
+import { ref, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import draggable from 'vuedraggable';
+import api from '../services/api';
 
-const router = useRouter();
 const route = useRoute();
+const router = useRouter();
+
 const loading = ref(true);
+const error = ref(null);
 const event = ref(null);
 const editing = ref(false);
-const allMembers = ref([]);
 const memberSearch = ref('');
+const members = ref([]);
+const selectedMemberIds = ref([]);
+
 const editData = ref({
-  date: '',
   title: '',
-  task: '',
-  remark: '',
+  location: '',
+  time: '',
+  notes: '',
   memberIds: []
 });
 
-// 过滤成员
-const filteredMembers = computed(() => {
-  if (!memberSearch.value) {
-    return allMembers.value;
-  }
-  
-  const query = memberSearch.value.toLowerCase();
-  return allMembers.value.filter(m => 
-    m.name.toLowerCase().includes(query) || 
-    String(m.id).includes(query)
-  );
-});
-
-// TXT 预览
-const txtPreview = computed(() => {
-  if (!event.value) return '';
-  
-  let txt = '[Event]\n';
-  txt += `Date: ${event.value.date}\n`;
-  txt += `Title: ${event.value.title}\n`;
-  txt += `Task: ${event.value.task || ''}\n`;
-  txt += `Remark: ${event.value.remark || ''}\n\n`;
-  txt += '[Members]\n';
-  
-  event.value.members.forEach(m => {
-    txt += `${String(m.id).padStart(3, '0')} ${m.name}`;
-    if (m.note) txt += ` (${m.note})`;
-    txt += '\n';
-  });
-  
-  return txt;
-});
+// 格式化日期时间
+const formatDateTime = (dateTime) => {
+  if (!dateTime) return '未指定';
+  const date = new Date(dateTime);
+  return date.toLocaleString('zh-CN');
+};
 
 // 加载事件详情
 const loadEvent = async () => {
   loading.value = true;
+  error.value = null;
+  
   try {
-    const eventId = route.params.id;
-    event.value = await api.getEventDetail(eventId);
-  } catch (error) {
-    console.error('加载事件失败:', error);
-    alert(`加载事件失败: ${error.message}`);
-    event.value = null;
+    const data = await api.getEvent(route.params.id);
+    event.value = data;
+  } catch (err) {
+    console.error('加载事件失败:', err);
+    error.value = '加载事件失败';
   } finally {
     loading.value = false;
   }
 };
 
-// 加载所有成员（用于编辑时选择）
+// 加载所有成员
 const loadMembers = async () => {
   try {
-    allMembers.value = await api.getMembers();
-  } catch (error) {
-    console.error('加载成员失败:', error);
+    const data = await api.getMembers();
+    members.value = data;
+  } catch (err) {
+    console.error('加载成员列表失败:', err);
+    alert('加载成员列表失败');
   }
 };
+
+// 过滤成员列表
+const filteredMembers = computed(() => {
+  const search = memberSearch.value.toLowerCase();
+  if (!search) return members.value;
+  return members.value.filter(member =>
+    member.name.toLowerCase().includes(search)
+  );
+});
+
+// 获取成员名字
+const getMemberName = (memberId) => {
+  const member = members.value.find(m => m.id === memberId);
+  return member ? member.name : `成员 ${memberId}`;
+};
+
+// 切换成员选择
+const toggleMember = (memberId) => {
+  const index = selectedMemberIds.value.indexOf(memberId);
+  if (index > -1) {
+    selectedMemberIds.value.splice(index, 1);
+  } else {
+    selectedMemberIds.value.push(memberId);
+  }
+};
+
+// 全选
+const selectAll = () => {
+  const allIds = members.value.map(m => m.id);
+  const newIds = allIds.filter(id => !selectedMemberIds.value.includes(id));
+  selectedMemberIds.value.push(...newIds);
+};
+
+// 清空
+const clearAll = () => {
+  selectedMemberIds.value = [];
+};
+
+// TXT 预览
+const txtPreview = computed(() => {
+  if (!event.value) return '';
+  
+  let text = `事件：${event.value.title}\n`;
+  text += `地点：${event.value.location || '未填写'}\n`;
+  text += `时间：${formatDateTime(event.value.time)}\n`;
+  if (event.value.notes) {
+    text += `备注：${event.value.notes}\n`;
+  }
+  text += '\n参与成员：\n';
+  event.value.members.forEach((member, index) => {
+    text += `${index + 1}. ${member.name}`;
+    if (member.note) {
+      text += ` (${member.note})`;
+    }
+    text += '\n';
+  });
+  
+  return text;
+});
 
 // 开始编辑
 const startEdit = async () => {
   await loadMembers();
   
   editData.value = {
-    date: event.value.date,
     title: event.value.title,
-    task: event.value.task || '',
-    remark: event.value.remark || '',
-    memberIds: event.value.members.map(m => m.id)
+    location: event.value.location || '',
+    time: event.value.time ? new Date(event.value.time).toISOString().slice(0, 16) : '',
+    notes: event.value.notes || '',
   };
+  
+  // 保持原有顺序
+  selectedMemberIds.value = event.value.members.map(m => m.id);
   
   editing.value = true;
 };
@@ -209,7 +285,13 @@ const saveEdit = async () => {
   }
 
   try {
-    await api.updateEvent(route.params.id, editData.value);
+    // 传递有序的成员ID数组
+    const payload = {
+      ...editData.value,
+      memberIds: selectedMemberIds.value
+    };
+    
+    await api.updateEvent(route.params.id, payload);
     alert('保存成功！');
     editing.value = false;
     await loadEvent();
@@ -223,6 +305,7 @@ const saveEdit = async () => {
 const cancelEdit = () => {
   editing.value = false;
   memberSearch.value = '';
+  selectedMemberIds.value = [];
 };
 
 // 导出 TXT
@@ -394,6 +477,132 @@ header button:last-child:hover {
   font-size: 14px;
 }
 
+/* 已选成员区域样式 */
+.selected-members-section {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f0f7ff;
+  border: 2px dashed #1976d2;
+  border-radius: 8px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.section-header h4 {
+  margin: 0;
+  color: #1976d2;
+  font-size: 16px;
+}
+
+.bulk-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn {
+  padding: 5px 15px;
+  border: 1px solid #1976d2;
+  background-color: white;
+  color: #1976d2;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background-color: #1976d2;
+  color: white;
+}
+
+.empty-message {
+  text-align: center;
+  color: #999;
+  padding: 30px;
+  font-style: italic;
+}
+
+.selected-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.selected-member-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 15px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.selected-member-item:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.drag-handle {
+  cursor: move;
+  color: #999;
+  font-size: 18px;
+  padding: 0 5px;
+  user-select: none;
+}
+
+.drag-handle:hover {
+  color: #1976d2;
+}
+
+.member-order {
+  font-weight: bold;
+  color: #1976d2;
+  min-width: 30px;
+}
+
+.member-name-text {
+  flex: 1;
+  color: #333;
+  font-size: 14px;
+}
+
+.remove-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background-color: #f44336;
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.remove-btn:hover {
+  background-color: #d32f2f;
+  transform: scale(1.1);
+}
+
+/* 拖拽动画 */
+.sortable-ghost {
+  opacity: 0.4;
+  background-color: #e3f2fd;
+}
+
+.sortable-drag {
+  opacity: 0.8;
+}
+
 .members-selector .members-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -486,10 +695,10 @@ h2 {
   border-radius: 4px;
 }
 
-.member-id {
-  font-family: monospace;
+.member-item .member-order {
   font-weight: bold;
-  color: #666;
+  color: #1976d2;
+  min-width: 30px;
 }
 
 .member-name {

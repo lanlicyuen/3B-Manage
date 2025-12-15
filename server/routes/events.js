@@ -106,11 +106,11 @@ router.get('/:id', async (req, res) => {
     }
     
     const members = await db.allAsync(`
-      SELECT m.id, m.name, em.note
+      SELECT m.id, m.name, em.note, em.sort_order
       FROM event_members em
       JOIN members m ON em.member_id = m.id
       WHERE em.event_id = ?
-      ORDER BY m.id
+      ORDER BY em.sort_order ASC, m.id ASC
     `, [req.params.id]);
     
     res.json({ ...event, members });
@@ -143,12 +143,12 @@ router.put('/:id', requireAuth, async (req, res) => {
     // 删除旧的成员关联
     await db.runAsync('DELETE FROM event_members WHERE event_id = ?', [req.params.id]);
     
-    // 插入新的成员关联
+    // 插入新的成员关联（按数组顺序写入 sort_order）
     if (memberIds && memberIds.length > 0) {
-      for (const memberId of memberIds) {
+      for (let i = 0; i < memberIds.length; i++) {
         await db.runAsync(
-          'INSERT INTO event_members (event_id, member_id) VALUES (?, ?)',
-          [req.params.id, memberId]
+          'INSERT INTO event_members (event_id, member_id, sort_order) VALUES (?, ?, ?)',
+          [req.params.id, memberIds[i], i + 1]
         );
       }
     }
@@ -156,10 +156,11 @@ router.put('/:id', requireAuth, async (req, res) => {
     // 返回更新后的完整信息
     const event = await db.getAsync('SELECT * FROM events WHERE id = ?', [req.params.id]);
     const members = await db.allAsync(`
-      SELECT m.id, m.name, em.note
+      SELECT m.id, m.name, em.note, em.sort_order
       FROM event_members em
       JOIN members m ON em.member_id = m.id
       WHERE em.event_id = ?
+      ORDER BY em.sort_order ASC, m.id ASC
     `, [req.params.id]);
     
     res.json({ ...event, members });
@@ -185,12 +186,12 @@ router.post('/', requireAuth, async (req, res) => {
     
     const eventId = result.lastID;
     
-    // 插入事件成员关联
+    // 插入事件成员关联（按数组顺序写入 sort_order）
     if (memberIds && memberIds.length > 0) {
-      for (const memberId of memberIds) {
+      for (let i = 0; i < memberIds.length; i++) {
         await db.runAsync(
-          'INSERT INTO event_members (event_id, member_id) VALUES (?, ?)',
-          [eventId, memberId]
+          'INSERT INTO event_members (event_id, member_id, sort_order) VALUES (?, ?, ?)',
+          [eventId, memberIds[i], i + 1]
         );
       }
     }
@@ -198,10 +199,11 @@ router.post('/', requireAuth, async (req, res) => {
     // 返回完整事件信息
     const event = await db.getAsync('SELECT * FROM events WHERE id = ?', [eventId]);
     const members = await db.allAsync(`
-      SELECT m.id, m.name
+      SELECT m.id, m.name, em.sort_order
       FROM event_members em
       JOIN members m ON em.member_id = m.id
       WHERE em.event_id = ?
+      ORDER BY em.sort_order ASC, m.id ASC
     `, [eventId]);
     
     res.status(201).json({ ...event, members });
@@ -223,11 +225,11 @@ router.post('/:id/export-txt', requireAuth, async (req, res) => {
     }
     
     const members = await db.allAsync(`
-      SELECT m.id, m.name, em.note
+      SELECT m.id, m.name, em.note, em.sort_order
       FROM event_members em
       JOIN members m ON em.member_id = m.id
       WHERE em.event_id = ?
-      ORDER BY m.id
+      ORDER BY em.sort_order ASC, m.id ASC
     `, [req.params.id]);
     
     // 生成 TXT 内容
@@ -238,8 +240,8 @@ router.post('/:id/export-txt', requireAuth, async (req, res) => {
     txt += `Remark: ${event.remark || ''}\n\n`;
     txt += '[Members]\n';
     
-    members.forEach(m => {
-      txt += `${String(m.id).padStart(3, '0')} ${m.name}`;
+    members.forEach((m, index) => {
+      txt += `${index + 1}. ${m.name}`;
       if (m.note) txt += ` (${m.note})`;
       txt += '\n';
     });

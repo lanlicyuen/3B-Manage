@@ -57,7 +57,7 @@
             <input 
               type="checkbox" 
               :value="member.id" 
-              :checked="eventData.memberIds.includes(member.id)"
+              :checked="selectedMemberIds.includes(member.id)"
               @change="toggleMember(member.id)"
             >
             <span class="member-id">{{ String(member.id).padStart(3, '0') }}</span>
@@ -65,17 +65,26 @@
           </label>
         </div>
         
-        <div class="selected-list">
-          <div class="selected-count-title">已选择 {{ eventData.memberIds.length }} 人</div>
-          <div class="selected-members" v-if="eventData.memberIds.length > 0">
-            <span 
-              v-for="(memberId, index) in selectedMembersOrder" 
-              :key="memberId"
-              class="selected-member-item"
-            >
-              {{ index + 1 }}. {{ String(memberId).padStart(3, '0') }} {{ getMemberName(memberId) }}
-            </span>
-          </div>
+        <div class="selected-list" v-if="selectedMemberIds.length > 0">
+          <div class="selected-count-title">已选择 {{ selectedMemberIds.length }} 人（可拖拽调整顺序）</div>
+          <draggable 
+            v-model="selectedMemberIds" 
+            item-key="id"
+            class="selected-members"
+            :animation="200"
+            handle=".drag-handle"
+          >
+            <template #item="{element, index}">
+              <div class="selected-member-item">
+                <span class="drag-handle">☰</span>
+                <span class="member-order">{{ index + 1 }}.</span>
+                <span class="member-name-text">{{ getMemberName(element) }}</span>
+              </div>
+            </template>
+          </draggable>
+        </div>
+        <div v-else class="empty-hint">
+          尚未选择成员
         </div>
       </div>
 
@@ -95,6 +104,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '../api';
+import draggable from 'vuedraggable';
 
 const router = useRouter();
 const loading = ref(true);
@@ -106,12 +116,11 @@ const eventData = ref({
   date: new Date().toISOString().split('T')[0],
   title: '',
   task: '',
-  remark: '',
-  memberIds: []
+  remark: ''
 });
 
-// 按勾选顺序记录的成员ID数组
-const selectedMembersOrder = ref([]);
+// 单一真相源：选中成员ID数组（顺序就是展示顺序）
+const selectedMemberIds = ref([]);
 
 // 过滤成员
 const filteredMembers = computed(() => {
@@ -141,18 +150,13 @@ const loadMembers = async () => {
 
 // 切换成员勾选状态（追踪顺序）
 const toggleMember = (memberId) => {
-  const index = eventData.value.memberIds.indexOf(memberId);
+  const index = selectedMemberIds.value.indexOf(memberId);
   if (index === -1) {
-    // 勾选：添加到数组
-    eventData.value.memberIds.push(memberId);
-    selectedMembersOrder.value.push(memberId);
+    // 勾选：添加到数组末尾
+    selectedMemberIds.value.push(memberId);
   } else {
-    // 取消勾选：从两个数组中移除
-    eventData.value.memberIds.splice(index, 1);
-    const orderIndex = selectedMembersOrder.value.indexOf(memberId);
-    if (orderIndex !== -1) {
-      selectedMembersOrder.value.splice(orderIndex, 1);
-    }
+    // 取消勾选：从数组中移除
+    selectedMemberIds.value.splice(index, 1);
   }
 };
 
@@ -165,17 +169,15 @@ const getMemberName = (memberId) => {
 // 全选（按当前过滤列表顺序添加）
 const selectAll = () => {
   filteredMembers.value.forEach(member => {
-    if (!eventData.value.memberIds.includes(member.id)) {
-      eventData.value.memberIds.push(member.id);
-      selectedMembersOrder.value.push(member.id);
+    if (!selectedMemberIds.value.includes(member.id)) {
+      selectedMemberIds.value.push(member.id);
     }
   });
 };
 
 // 清空
 const clearAll = () => {
-  eventData.value.memberIds = [];
-  selectedMembersOrder.value = [];
+  selectedMemberIds.value = [];
 };
 
 // 创建事件
@@ -185,7 +187,7 @@ const createEvent = async () => {
     return;
   }
 
-  if (eventData.value.memberIds.length === 0) {
+  if (selectedMemberIds.value.length === 0) {
     if (!confirm('未选择任何参与成员，确定要创建吗？')) {
       return;
     }
@@ -193,7 +195,11 @@ const createEvent = async () => {
 
   submitting.value = true;
   try {
-    const result = await api.createEvent(eventData.value);
+    const payload = {
+      ...eventData.value,
+      memberIds: selectedMemberIds.value // 按数组顺序传递
+    };
+    const result = await api.createEvent(payload);
     alert('事件创建成功！');
     router.push(`/events/${result.id}`);
   } catch (error) {
@@ -392,16 +398,56 @@ form {
   background-color: #f5f5f5;
   border-radius: 0 0 4px 4px;
   border-top: 1px solid #ddd;
-  max-height: 200px;
+  max-height: 300px;
   overflow-y: auto;
 }
 
 .selected-member-item {
-  display: inline-block;
-  margin-right: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
   margin-bottom: 8px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.selected-member-item:hover {
+  border-color: #1976d2;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.drag-handle {
+  cursor: move;
+  color: #999;
+  font-size: 18px;
+  user-select: none;
+}
+
+.drag-handle:hover {
+  color: #1976d2;
+}
+
+.member-order {
+  font-weight: bold;
+  color: #1976d2;
+  min-width: 30px;
+}
+
+.member-name-text {
   color: #333;
-  font-size: 14px;
+  flex: 1;
+}
+
+.empty-hint {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  margin-top: 15px;
 }
 
 .form-actions {
@@ -440,5 +486,15 @@ form {
 
 .cancel-btn:hover {
   background-color: #616161;
+}
+
+/* 拖拽时的样式 */
+.selected-members .sortable-ghost {
+  opacity: 0.4;
+  background-color: #e3f2fd;
+}
+
+.selected-members .sortable-drag {
+  opacity: 0.8;
 }
 </style>

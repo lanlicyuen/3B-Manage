@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS event_members (
     event_id INTEGER NOT NULL,
     member_id INTEGER NOT NULL,
     note TEXT,
+    sort_order INTEGER DEFAULT 0,
     FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
     FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE,
     UNIQUE(event_id, member_id)
