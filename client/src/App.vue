@@ -6,10 +6,13 @@
     <footer class="app-footer">
       © {{ new Date().getFullYear() }} 1plabs.pro 版权所有
     </footer>
+    <!-- PWA 安装按钮 -->
+    <InstallPWA />
   </div>
 </template>
 
 <script setup>
+import InstallPWA from './components/InstallPWA.vue'
 </script>
 
 <style>

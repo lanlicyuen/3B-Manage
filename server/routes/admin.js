@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { createToken, removeToken } = require('../middleware/auth');
 
-// 预设密码（硬编码）
-const ADMIN_PASSWORD = '12345aBc';
+// 预设密码（从环境变量读取，如未设置则使用默认值）
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'aA12345aA';
 
 // 管理员登录
 router.post('/login', (req, res) => {

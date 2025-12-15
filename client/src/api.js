@@ -124,13 +124,19 @@ export const api = {
     return res.json();
   },
   
+  // 获取单个事件详情
   async getEventDetail(id) {
     const res = await fetch(`${API_BASE}/events/${id}`);
     if (!res.ok) {
-      const error = await res.json().catch(() => ({ error: 'Network error' }));
-      throw new Error(error.error || `HTTP ${res.status}`);
+      const error = await res.json().catch(() => ({ error: '事件不存在' }));
+      throw new Error(error.error || `HTTP ${res.status}: ${res.statusText}`);
     }
     return res.json();
+  },
+  
+  // getEvent 别名（兼容旧代码）
+  async getEvent(id) {
+    return this.getEventDetail(id);
   },
   
   async createEvent(data) {
@@ -164,12 +170,17 @@ export const api = {
       method: 'POST',
       headers: getAuthHeaders()
     });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: '导出失败' }));
+      throw new Error(error.error || `HTTP ${res.status}`);
+    }
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `event_${id}.txt`;
     a.click();
+    window.URL.revokeObjectURL(url);
   },
   
   async deleteEvent(id) {

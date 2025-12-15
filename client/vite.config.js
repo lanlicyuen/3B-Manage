@@ -67,10 +67,15 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 20001,
     open: true,
-    allowedHosts: ['3b.1plabs.pro'],
+    allowedHosts: [
+      '3b.1plabs.pro',
+      '.1plabs.pro',  // 支持子域名
+      'localhost',
+      '127.0.0.1'
+    ],
     proxy: {
       '/api': {
-        target: 'http://localhost:20002',
+        target: 'http://127.0.0.1:20002',
         changeOrigin: true
       }
     }
@@ -79,7 +84,12 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 20001,
     strictPort: true,
-    allowedHosts: ['3b.1plabs.pro'],
+    allowedHosts: [
+      '3b.1plabs.pro',
+      '.1plabs.pro',  // 支持子域名
+      'localhost',
+      '127.0.0.1'
+    ],
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:20002',

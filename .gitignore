@@ -23,6 +23,9 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# 敏感配置文件
+server/routes/admin.js
+
 # 编辑器
 .DS_Store
 .vscode/

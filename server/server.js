@@ -49,15 +49,15 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: '服务器内部错误' });
 });
 
-// 启动服务器（仅绑定本地回环，通过 NPM 反向代理访问）
-const HOST = process.env.HOST || '127.0.0.1';
+// 启动服务器（监听所有网络接口，允许 Docker 容器访问）
+const HOST = process.env.HOST || '0.0.0.0';
 app.listen(PORT, HOST, () => {
   console.log(`
 ====================================
   游戏成员管理系统 - 服务器已启动
   监听地址: ${HOST}:${PORT}
   时间: ${new Date().toLocaleString('zh-CN')}
-  提示: 仅本地可访问，外网通过 Nginx 反代
+  提示: 通过 Nginx Proxy Manager (Docker) 反代访问
 ====================================
   `);
 });

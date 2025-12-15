@@ -6,6 +6,7 @@ const { requireAuth } = require('../middleware/auth');
 // 获取事件列表（支持搜索和日期过滤，返回事件及参与人数）
 router.get('/', async (req, res) => {
   const { from, to, q } = req.query;
+  console.log('[GET /api/events] 请求参数:', { from, to, q });
   
   try {
     let sql = `
@@ -50,9 +51,13 @@ router.get('/', async (req, res) => {
     
     sql += ' GROUP BY e.id ORDER BY e.date DESC';
     
+    console.log('[GET /api/events] SQL:', sql);
+    console.log('[GET /api/events] Params:', params);
     const events = await db.allAsync(sql, params);
+    console.log('[GET /api/events] 查询结果数量:', events.length);
     res.json(events);
   } catch (error) {
+    console.error('[GET /api/events] 错误:', error);
     res.status(500).json({ error: error.message });
   }
 });

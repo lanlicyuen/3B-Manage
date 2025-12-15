@@ -18,23 +18,23 @@
       <!-- 编辑模式 -->
       <div v-if="editing" class="edit-card">
         <div class="form-group">
-          <label>标题</label>
-          <input v-model="editData.title" type="text" placeholder="输入事件标题" />
+          <label>日期 *</label>
+          <input type="date" v-model="editData.date" required>
         </div>
 
         <div class="form-group">
-          <label>地点</label>
-          <input v-model="editData.location" type="text" placeholder="输入地点" />
+          <label>标题 *</label>
+          <input v-model="editData.title" type="text" placeholder="输入事件标题" required />
         </div>
 
         <div class="form-group">
-          <label>时间</label>
-          <input v-model="editData.time" type="datetime-local" />
+          <label>任务</label>
+          <input v-model="editData.task" type="text" placeholder="例如：公会战、副本挑战">
         </div>
 
         <div class="form-group">
           <label>备注</label>
-          <textarea v-model="editData.notes" rows="3" placeholder="输入备注"></textarea>
+          <textarea v-model="editData.remark" rows="3" placeholder="其他说明"></textarea>
         </div>
 
         <h3>参与成员</h3>
@@ -108,16 +108,16 @@
               <span class="value">{{ event.title }}</span>
             </div>
             <div class="info-item">
-              <span class="label">地点</span>
-              <span class="value">{{ event.location || '未填写' }}</span>
+              <span class="label">日期</span>
+              <span class="value">{{ formatDate(event.date) }}</span>
             </div>
             <div class="info-item">
-              <span class="label">时间</span>
-              <span class="value">{{ formatDateTime(event.time) }}</span>
+              <span class="label">任务</span>
+              <span class="value">{{ event.task || '无' }}</span>
             </div>
             <div class="info-item full-width">
               <span class="label">备注</span>
-              <span class="value">{{ event.notes || '无' }}</span>
+              <span class="value">{{ event.remark || '无' }}</span>
             </div>
           </div>
         </div>
@@ -146,7 +146,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import draggable from 'vuedraggable';
-import api from '../services/api';
+import { api } from '../api';
 
 const route = useRoute();
 const router = useRouter();
@@ -160,12 +160,18 @@ const members = ref([]);
 const selectedMemberIds = ref([]);
 
 const editData = ref({
+  date: '',
   title: '',
-  location: '',
-  time: '',
-  notes: '',
+  task: '',
+  remark: '',
   memberIds: []
 });
+
+// 格式化日期（显示用）
+const formatDate = (dateStr) => {
+  if (!dateStr) return '未指定';
+  return dateStr;
+};
 
 // 格式化日期时间
 const formatDateTime = (dateTime) => {
@@ -184,7 +190,7 @@ const loadEvent = async () => {
     event.value = data;
   } catch (err) {
     console.error('加载事件失败:', err);
-    error.value = '加载事件失败';
+    error.value = `加载事件失败: ${err.message}`;
   } finally {
     loading.value = false;
   }
@@ -243,10 +249,12 @@ const txtPreview = computed(() => {
   if (!event.value) return '';
   
   let text = `事件：${event.value.title}\n`;
-  text += `地点：${event.value.location || '未填写'}\n`;
-  text += `时间：${formatDateTime(event.value.time)}\n`;
-  if (event.value.notes) {
-    text += `备注：${event.value.notes}\n`;
+  text += `日期：${event.value.date || '未填写'}\n`;
+  if (event.value.task) {
+    text += `任务：${event.value.task}\n`;
+  }
+  if (event.value.remark) {
+    text += `备注：${event.value.remark}\n`;
   }
   text += '\n参与成员：\n';
   event.value.members.forEach((member, index) => {
@@ -265,10 +273,10 @@ const startEdit = async () => {
   await loadMembers();
   
   editData.value = {
+    date: event.value.date || '',
     title: event.value.title,
-    location: event.value.location || '',
-    time: event.value.time ? new Date(event.value.time).toISOString().slice(0, 16) : '',
-    notes: event.value.notes || '',
+    task: event.value.task || '',
+    remark: event.value.remark || '',
   };
   
   // 保持原有顺序
@@ -283,11 +291,19 @@ const saveEdit = async () => {
     alert('标题不能为空');
     return;
   }
+  
+  if (!editData.value.date) {
+    alert('日期不能为空');
+    return;
+  }
 
   try {
     // 传递有序的成员ID数组
     const payload = {
-      ...editData.value,
+      date: editData.value.date,
+      title: editData.value.title.trim(),
+      task: editData.value.task || '',
+      remark: editData.value.remark || '',
       memberIds: selectedMemberIds.value
     };
     
@@ -314,7 +330,7 @@ const exportTxt = async () => {
     await api.exportEventTxt(route.params.id);
   } catch (error) {
     console.error('导出失败:', error);
-    alert('导出失败');
+    alert(`导出失败: ${error.message}`);
   }
 };
 
