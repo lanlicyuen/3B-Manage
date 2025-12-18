@@ -5,8 +5,8 @@
       <div class="header-actions">
         <!-- 管理员功能按钮（需要权限） -->
         <button v-if="!editing && isAdmin" @click="startEdit" class="edit-btn">编辑</button>
-        <button v-if="editing" @click="saveEdit" class="save-btn">保存</button>
-        <button v-if="editing" @click="cancelEdit" class="cancel-btn">取消</button>
+        <button v-if="editing && isAdmin" @click="saveEdit" class="save-btn">保存</button>
+        <button v-if="editing && isAdmin" @click="cancelEdit" class="cancel-btn">取消</button>
         <button v-if="!editing && isAdmin" @click="exportTxt" class="export-btn">导出TXT</button>
         <button v-if="!editing && isAdmin" @click="deleteEvent" class="delete-btn">删除</button>
         <button @click="$router.push('/')">返回</button>
@@ -16,8 +16,8 @@
     <div v-if="loading" class="loading">加载中...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
     <div v-else-if="event" class="content">
-      <!-- 编辑模式 -->
-      <div v-if="editing" class="edit-card">
+      <!-- 编辑模式（需要管理员权限） -->
+      <div v-if="editing && isAdmin" class="edit-card">
         <div class="form-group">
           <label>日期 *</label>
           <input type="date" v-model="editData.date" required>
@@ -210,13 +210,28 @@ const loadMembers = async () => {
   }
 };
 
-// 过滤成员列表
+// 过滤成员列表（未选中的排在前面，已选中的排在后面）
 const filteredMembers = computed(() => {
+  let result = members.value;
+  
+  // 如果有搜索条件，先过滤
   const search = memberSearch.value.toLowerCase();
-  if (!search) return members.value;
-  return members.value.filter(member =>
-    member.name.toLowerCase().includes(search)
-  );
+  if (search) {
+    result = result.filter(member =>
+      member.name.toLowerCase().includes(search)
+    );
+  }
+  
+  // 排序：未选中的在前，已选中的在后
+  return result.sort((a, b) => {
+    const aSelected = selectedMemberIds.value.includes(a.id);
+    const bSelected = selectedMemberIds.value.includes(b.id);
+    
+    if (aSelected === bSelected) {
+      return 0; // 保持原有顺序
+    }
+    return aSelected ? 1 : -1; // 未选中的(-1)排在前面，已选中的(1)排在后面
+  });
 });
 
 // 获取成员名字

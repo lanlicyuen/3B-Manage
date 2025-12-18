@@ -3,7 +3,7 @@
  * 用于保护需要管理员权限的 API 接口
  */
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'aA12345aA';
+const { verifyToken } = require('./auth');
 
 /**
  * 验证管理员 Token
@@ -12,7 +12,16 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'aA12345aA';
  * @param {Function} next 下一个中间件
  */
 function requireAdmin(req, res, next) {
-  const token = req.headers['x-admin-token'];
+  // 优先检查 X-Admin-Token
+  let token = req.headers['x-admin-token'];
+  
+  // 如果没有 X-Admin-Token，则从 Authorization header 中提取
+  if (!token) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+  }
   
   if (!token) {
     return res.status(401).json({ 
@@ -21,10 +30,11 @@ function requireAdmin(req, res, next) {
     });
   }
   
-  if (token !== ADMIN_PASSWORD) {
+  // 使用 auth 中间件的 verifyToken 方法验证
+  if (!verifyToken(token)) {
     return res.status(403).json({ 
       error: '权限不足',
-      message: '管理员令牌无效'
+      message: '管理员令牌无效或已过期'
     });
   }
   

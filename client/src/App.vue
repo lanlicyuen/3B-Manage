@@ -16,6 +16,25 @@
       </div>
     </header>
 
+    <!-- 管理功能导航栏（只在登录后显示） -->
+    <nav v-if="adminLoggedIn" class="admin-nav">
+      <router-link to="/" class="nav-item" :class="{ active: $route.path === '/' }">
+        📊 首页出勤表
+      </router-link>
+      <router-link to="/members" class="nav-item" :class="{ active: $route.path === '/members' }">
+        👥 成员管理
+      </router-link>
+      <router-link to="/events/create" class="nav-item" :class="{ active: $route.path === '/events/create' }">
+        ➕ 创建事件
+      </router-link>
+      <router-link to="/events" class="nav-item" :class="{ active: $route.path === '/events' }">
+        📋 查看事件
+      </router-link>
+      <router-link to="/reports" class="nav-item" :class="{ active: $route.path === '/reports' }">
+        📈 报表导出
+      </router-link>
+    </nav>
+
     <div class="content">
       <router-view :key="$route.fullPath" />
     </div>
@@ -31,7 +50,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import InstallPWA from './components/InstallPWA.vue'
-import { isAdmin, login, logout } from './utils/auth'
+import { isAdmin } from './utils/auth'
+import { api } from './api'
 
 const router = useRouter()
 const adminLoggedIn = ref(false)
@@ -42,24 +62,32 @@ onMounted(() => {
 })
 
 // 显示登录弹窗
-function showLogin() {
+async function showLogin() {
   const password = prompt('请输入管理员密码：')
   if (!password) return
   
-  if (login(password)) {
+  try {
+    const result = await api.adminLogin(password)
+    localStorage.setItem('admin_token', result.token)
     adminLoggedIn.value = true
     alert('✅ 已进入管理模式')
     // 刷新当前页面以更新权限状态
     router.go(0)
-  } else {
-    alert('❌ 密码错误')
+  } catch (error) {
+    alert('❌ ' + (error.message || '登录失败'))
   }
 }
 
 // 退出登录
-function handleLogout() {
+async function handleLogout() {
   if (confirm('确定退出管理模式？')) {
-    logout()
+    try {
+      await api.adminLogout()
+    } catch (error) {
+      console.error('退出登录失败:', error)
+    }
+    localStorage.removeItem('admin_token')
+    localStorage.removeItem('isAdmin')
     adminLoggedIn.value = false
     alert('已退出管理模式')
     // 跳转到首页
@@ -222,6 +250,46 @@ body {
   transform: translateY(-1px);
 }
 
+/* 管理功能导航栏 */
+.admin-nav {
+  background: linear-gradient(to right, #f8f9fa, #e9ecef);
+  padding: 12px 24px;
+  display: flex;
+  gap: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid #dee2e6;
+}
+
+.nav-item {
+  padding: 8px 16px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #495057;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  border: 1px solid #dee2e6;
+}
+
+.nav-item:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+}
+
+.nav-item.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
+}
+
 /* 移动端响应式 */
 @media (max-width: 768px) {
   .app-header {
@@ -242,6 +310,19 @@ body {
   
   .btn-login,
   .btn-logout {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+  
+  /* 移动端导航栏 */
+  .admin-nav {
+    padding: 8px 12px;
+    gap: 6px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  .nav-item {
     padding: 6px 12px;
     font-size: 13px;
   }

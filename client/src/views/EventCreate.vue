@@ -122,17 +122,29 @@ const eventData = ref({
 // 单一真相源：选中成员ID数组（顺序就是展示顺序）
 const selectedMemberIds = ref([]);
 
-// 过滤成员
+// 过滤成员（未选中的排在前面，已选中的排在后面）
 const filteredMembers = computed(() => {
-  if (!searchQuery.value) {
-    return members.value;
+  let result = members.value;
+  
+  // 如果有搜索条件，先过滤
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    result = result.filter(m => 
+      m.name.toLowerCase().includes(query) || 
+      String(m.id).includes(query)
+    );
   }
   
-  const query = searchQuery.value.toLowerCase();
-  return members.value.filter(m => 
-    m.name.toLowerCase().includes(query) || 
-    String(m.id).includes(query)
-  );
+  // 排序：未选中的在前，已选中的在后
+  return result.sort((a, b) => {
+    const aSelected = selectedMemberIds.value.includes(a.id);
+    const bSelected = selectedMemberIds.value.includes(b.id);
+    
+    if (aSelected === bSelected) {
+      return 0; // 保持原有顺序
+    }
+    return aSelected ? 1 : -1; // 未选中的(-1)排在前面，已选中的(1)排在后面
+  });
 });
 
 // 加载成员列表

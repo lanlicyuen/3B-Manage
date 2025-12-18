@@ -4,14 +4,14 @@
  */
 
 const ADMIN_KEY = 'isAdmin';
-const TOKEN_KEY = 'adminToken';
+const TOKEN_KEY = 'admin_token';
 const ADMIN_PASSWORD = 'aA12345aA'; // 与后端环境变量保持一致
 
 /**
  * 检查是否已登录
  */
 export function isAdmin() {
-  return localStorage.getItem(ADMIN_KEY) === '1';
+  return !!localStorage.getItem(TOKEN_KEY);
 }
 
 /**
