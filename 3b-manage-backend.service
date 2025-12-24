@@ -1,0 +1,18 @@
+[Unit]
+Description=3B-Manage Backend API Service
+After=network.target
+
+[Service]
+Type=simple
+User=lanlic
+WorkingDirectory=/home/lanlic/Html-Project/3b-manage/game-manager/server
+Environment="NODE_ENV=production"
+EnvironmentFile=/home/lanlic/Html-Project/3b-manage/game-manager/.env
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/lanlic/Html-Project/3b-manage/game-manager/server/server.log
+StandardError=append:/home/lanlic/Html-Project/3b-manage/game-manager/server/server.log
+
+[Install]
+WantedBy=multi-user.target

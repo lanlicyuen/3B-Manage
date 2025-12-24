@@ -1,0 +1,17 @@
+[Unit]
+Description=3B-Manage Frontend Vite Preview Service
+After=network.target 3b-manage-backend.service
+
+[Service]
+Type=simple
+User=lanlic
+WorkingDirectory=/home/lanlic/Html-Project/3b-manage/game-manager/client
+Environment="NODE_ENV=production"
+ExecStart=/usr/bin/npm run preview
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/lanlic/Html-Project/3b-manage/game-manager/client/preview.log
+StandardError=append:/home/lanlic/Html-Project/3b-manage/game-manager/client/preview.log
+
+[Install]
+WantedBy=multi-user.target
